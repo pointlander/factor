@@ -11,6 +11,7 @@ import (
 	"gonum.org/v1/gonum/stat"
 
 	"github.com/pointlander/datum/iris"
+	"github.com/pointlander/kmeans"
 	"github.com/pointlander/matrix"
 )
 
@@ -20,12 +21,21 @@ func main() {
 		panic(err)
 	}
 
+	max := 0.0
+	for i := range datum.Fisher {
+		for _, value := range datum.Fisher[i].Measures {
+			if value > max {
+				max = value
+			}
+		}
+	}
+
 	data := mat.NewDense(150, 4, nil)
 	orig := matrix.NewMatrix(4, 150)
 	for i := range datum.Fisher {
 		for j, value := range datum.Fisher[i].Measures {
-			data.Set(i, j, value)
-			orig.Data = append(orig.Data, float32(value))
+			data.Set(i, j, value/max)
+			orig.Data = append(orig.Data, float32(value/max))
 		}
 	}
 
@@ -56,5 +66,39 @@ func main() {
 			fmt.Printf("%f ", sa.Data[i*4+j])
 		}
 		fmt.Printf("%s\n", datum.Fisher[i].Label)
+	}
+
+	rawData := make([][]float64, sa.Rows)
+	for i := 0; i < sa.Rows; i++ {
+		for j := 0; j < sa.Cols; j++ {
+			rawData[i] = append(rawData[i], float64(sa.Data[i*sa.Cols+j]))
+		}
+	}
+	meta := make([][]float64, sa.Rows)
+	for i := range meta {
+		meta[i] = make([]float64, sa.Rows)
+	}
+
+	for i := 0; i < 100; i++ {
+		clusters, _, err := kmeans.Kmeans(int64(i+1), rawData, 3, kmeans.SquaredEuclideanDistance, -1)
+		if err != nil {
+			panic(err)
+		}
+		for i := range meta {
+			target := clusters[i]
+			for j, v := range clusters {
+				if v == target {
+					meta[i][j]++
+				}
+			}
+		}
+	}
+
+	clusters, _, err := kmeans.Kmeans(1, meta, 3, kmeans.SquaredEuclideanDistance, -1)
+	if err != nil {
+		panic(err)
+	}
+	for i, v := range clusters {
+		fmt.Printf("%3d %15s %d\n", i, datum.Fisher[i].Label, v)
 	}
 }
