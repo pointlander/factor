@@ -11,6 +11,7 @@ import (
 	"gonum.org/v1/gonum/stat"
 
 	"github.com/pointlander/datum/iris"
+	"github.com/pointlander/matrix"
 )
 
 func main() {
@@ -20,9 +21,11 @@ func main() {
 	}
 
 	data := mat.NewDense(150, 4, nil)
+	orig := matrix.NewMatrix(4, 150)
 	for i := range datum.Fisher {
 		for j, value := range datum.Fisher[i].Measures {
 			data.Set(i, j, value)
+			orig.Data = append(orig.Data, float32(value))
 		}
 	}
 
@@ -40,4 +43,18 @@ func main() {
 	proj.Mul(data, vec.Slice(0, 4, 0, k))
 
 	fmt.Printf("proj = %.4f\n", mat.Formatted(&proj, mat.Prefix("       ")))
+
+	in := matrix.NewMatrix(4, 150)
+	for i := 0; i < 150; i++ {
+		for j := 0; j < 4; j++ {
+			in.Data = append(in.Data, float32(proj.At(i, j)))
+		}
+	}
+	sa := matrix.SelfAttention(in, in, in)
+	for i := range datum.Fisher {
+		for j := 0; j < 4; j++ {
+			fmt.Printf("%f ", sa.Data[i*4+j])
+		}
+		fmt.Printf("%s\n", datum.Fisher[i].Label)
+	}
 }
