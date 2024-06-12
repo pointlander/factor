@@ -74,27 +74,33 @@ func main() {
 			rawData[i] = append(rawData[i], float64(sa.Data[i*sa.Cols+j]))
 		}
 	}
-	meta := make([][]float64, sa.Rows)
-	for i := range meta {
-		meta[i] = make([]float64, sa.Rows)
-	}
+	meta := matrix.NewMatrix(150, 150, make([]float32, 150*150)...)
 
 	for i := 0; i < 100; i++ {
 		clusters, _, err := kmeans.Kmeans(int64(i+1), rawData, 3, kmeans.SquaredEuclideanDistance, -1)
 		if err != nil {
 			panic(err)
 		}
-		for i := range meta {
+		for i := 0; i < 150; i++ {
 			target := clusters[i]
 			for j, v := range clusters {
 				if v == target {
-					meta[i][j]++
+					meta.Data[i*150+j]++
 				}
 			}
 		}
 	}
 
-	clusters, _, err := kmeans.Kmeans(1, meta, 3, kmeans.SquaredEuclideanDistance, -1)
+	meta = matrix.SelfAttention(meta, meta, meta)
+
+	x := make([][]float64, 150)
+	for i := range x {
+		x[i] = make([]float64, 150)
+		for j := range x[i] {
+			x[i][j] = float64(meta.Data[i*150+j])
+		}
+	}
+	clusters, _, err := kmeans.Kmeans(1, x, 3, kmeans.SquaredEuclideanDistance, -1)
 	if err != nil {
 		panic(err)
 	}
